@@ -212,7 +212,7 @@ tr.total-row td{border-top:2px solid var(--accent);font-weight:700;background:#1
     <div class="card">
       <div class="card-label">現金與存款</div>
       <div class="card-value">NT$2,794,065</div>
-      <div class="card-sub">凱基 1,326K / 質押 1,000K / 台新 228K / 現金 240K ｜佔比 16.7%</div>
+      <div class="card-sub">凱基 2,326K（含質押100萬）/ 台新 228K / 現金 240K ｜佔比 16.7%</div>
     </div>
   </div>
 
@@ -410,15 +410,14 @@ const insuranceItems = [
 ];
 const insuranceTotalTWD = 686418+582103;
 const cashItems = [
-  {name:'凱基銀行',market:'Cash',valueTWD:1325899},
-  {name:'質押保證金',market:'Cash',valueTWD:1000000},
+  {name:'凱基銀行（含質押保證金100萬）',market:'Cash',valueTWD:2325899},
   {name:'台新銀行（交點文化）',market:'Cash',valueTWD:228166},
   {name:'手頭現金',market:'Cash',valueTWD:240000},
 ];
 const loanItems = [
   {name:'應收借款（Gask）',market:'Loan',valueTWD:250000},
 ];
-const cashTotalTWD = 1325899+1000000+228166+240000;
+const cashTotalTWD = 2325899+228166+240000;
 const loanTotalTWD = 250000;
 const grandTotalTWD = 7045266+5234436+insuranceTotalTWD+cryptoTotalTWD+cashTotalTWD+loanTotalTWD;
 
