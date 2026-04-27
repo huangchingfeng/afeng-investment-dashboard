@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阿峰老師投資儀表板</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d1a;--card:#1a1a2e;--card2:#141428;--card-hover:#22223a;--border:#2a2a4a;
+  --text:#e0e0e0;--text-dim:#8888aa;--accent:#4fc3f7;
+  --green:#00e676;--green-dim:#1b5e20;--red:#ff5252;--red-dim:#b71c1c;
+  --gold:#ffd740;--blue:#448aff;--cyan:#18ffff;--purple:#b388ff;--orange:#ffab40;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* ===== TAB NAVIGATION ===== */
+.tab-nav{display:flex;background:linear-gradient(135deg,#16213e,#1a1a2e);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:100}
+.tab-btn{flex:1;padding:16px 24px;text-align:center;font-size:1rem;font-weight:700;letter-spacing:1px;color:var(--text-dim);background:transparent;border:none;cursor:pointer;transition:all .3s ease;position:relative;max-width:320px}
+.tab-btn:hover{color:var(--text);background:rgba(79,195,247,.05)}
+.tab-btn.active{color:var(--accent);background:rgba(79,195,247,.08)}
+.tab-btn.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:2px 2px 0 0}
+.tab-btn .tab-icon{margin-right:8px;font-size:1.1rem}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ===== TAB 1: HEADER ===== */
+.header{background:linear-gradient(135deg,#16213e,#1a1a2e);border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header h1{font-size:1.5rem;font-weight:700;letter-spacing:1px}
+.header h1 span{color:var(--accent)}
+.header-right{text-align:right;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.header-date{color:var(--text-dim);font-size:.85rem}
+.header-total{font-size:1.6rem;font-weight:700;color:var(--gold)}
+.toggle-btn{background:var(--border);border:1px solid #3a3a5a;color:var(--text);padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.85rem;transition:.2s}
+.toggle-btn:hover{background:#3a3a5a}
+.toggle-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+
+/* Layout */
+.container{max-width:1400px;margin:0 auto;padding:20px 24px 40px}
+
+/* Summary Cards */
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;transition:.2s}
+.card:hover{border-color:#3a3a6a}
+.card-label{font-size:.8rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card-value{font-size:1.55rem;font-weight:700}
+.card-sub{font-size:.82rem;color:var(--text-dim);margin-top:4px}
+.positive{color:var(--green)}.negative{color:var(--red)}
+
+/* Charts area */
+.charts-row{display:grid;grid-template-columns:1fr 1.5fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px}
+.chart-card h3{font-size:.95rem;color:var(--text-dim);margin-bottom:14px;font-weight:600}
+.chart-wrap{position:relative;width:100%;max-height:340px}
+.chart-wrap canvas{width:100%!important}
+
+.pnl-chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+.pnl-chart-card h3{font-size:.95rem;color:var(--text-dim);margin-bottom:14px;font-weight:600}
+
+/* Table */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;overflow-x:auto}
+.table-card h3{font-size:.95rem;color:var(--text-dim);margin-bottom:14px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--text-dim);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--accent)}
+th .sort-arrow{font-size:.7rem;margin-left:4px}
+td{padding:9px 12px;border-bottom:1px solid #1e1e36;white-space:nowrap}
+tr:hover td{background:var(--card-hover)}
+tr.total-row td{border-top:2px solid var(--accent);font-weight:700;background:#12122a}
+.market-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.market-tag.us{background:#1a237e;color:#7986cb}
+.market-tag.tw{background:#1b5e20;color:#81c784}
+.market-tag.crypto{background:#4a148c;color:#ce93d8}
+.market-tag.insurance{background:#4e342e;color:#bcaaa4}
+.market-tag.cash{background:#33691e;color:#aed581}
+.market-tag.loan{background:#e65100;color:#ffcc80}
+
+/* ===== TAB 2: HISTORY STYLES ===== */
+.h-header{text-align:center;padding:2.5rem 1rem 2rem;position:relative}
+.h-header::after{content:'';display:block;width:80px;height:3px;background:linear-gradient(90deg,var(--gold),var(--cyan));margin:1.2rem auto 0;border-radius:2px}
+.h-header h1{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,var(--gold),#fff,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-header .subtitle{color:var(--text-dim);font-size:.95rem;margin-top:.4rem;font-weight:300}
+.h-header .big-number{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;color:var(--gold);margin-top:.8rem;text-shadow:0 0 30px rgba(255,215,64,.25)}
+.h-header .big-label{color:var(--text-dim);font-size:.85rem;margin-top:.2rem}
+
+.section-title{font-size:1.15rem;font-weight:700;color:var(--cyan);margin:2.5rem 0 1rem;padding-left:.8rem;border-left:3px solid var(--cyan);letter-spacing:1px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.grid-2-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+
+.summary-wrapper-3{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:.5rem;align-items:center}
+.arrow-col{display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--gold);text-shadow:0 0 15px rgba(255,215,64,.4)}
+.summary-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.summary-card h3{font-size:.85rem;color:var(--text-dim);margin-bottom:.8rem;font-weight:400}
+.summary-card .total{font-size:1.5rem;font-weight:900;margin-bottom:1rem}
+.breakdown-item{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem}
+.breakdown-item:last-child{border:none}
+.breakdown-label{color:var(--text-dim)}
+
+.chart-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1rem}
+.card-title{font-size:.8rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:.6rem;font-weight:500}
+
+.stock-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1rem;position:relative;overflow:hidden}
+.stock-card .ticker{font-size:1.1rem;font-weight:700;color:var(--cyan)}
+.stock-card .name{font-size:.75rem;color:var(--text-dim)}
+.stock-row{display:flex;justify-content:space-between;font-size:.82rem;padding:.25rem 0}
+.stock-row span:first-child{color:var(--text-dim)}
+.progress-bar{height:6px;background:var(--card2);border-radius:3px;margin-top:.5rem;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .8s ease}
+
+.migration-list{list-style:none}
+.migration-item{display:flex;align-items:center;gap:.8rem;padding:.7rem .5rem;border-bottom:1px solid rgba(255,255,255,.05);font-size:.85rem}
+.migration-item:last-child{border:none}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:700;text-transform:uppercase}
+.badge-sold{background:rgba(255,82,82,.15);color:var(--red)}
+.badge-added{background:rgba(0,230,118,.15);color:var(--green)}
+.badge-increased{background:rgba(68,138,255,.15);color:var(--blue)}
+.badge-held{background:rgba(255,215,64,.1);color:var(--gold)}
+
+.flow-section{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.flow-row{display:flex;align-items:center;gap:.5rem;margin:.6rem 0;font-size:.85rem}
+.flow-bar{height:22px;border-radius:4px;display:flex;align-items:center;padding:0 .6rem;font-size:.72rem;font-weight:700;color:#fff;min-width:40px;white-space:nowrap}
+.flow-label{min-width:90px;color:var(--text-dim);text-align:right;font-size:.8rem}
+
+.insight-card{background:linear-gradient(135deg,var(--card2),#1a1a35);border:1px solid var(--border);border-radius:12px;padding:1.2rem;display:flex;gap:1rem;align-items:flex-start}
+.insight-icon{font-size:1.8rem;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(255,255,255,.04)}
+.insight-text{font-size:.88rem;line-height:1.55}
+.insight-text strong{display:block;margin-bottom:.2rem;font-size:.95rem}
+
+.pos{color:var(--green)}.neg{color:var(--red)}.gold{color:var(--gold)}
+
+.scroll-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;background:var(--card2);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gold);font-size:1.2rem;opacity:.7;transition:opacity .3s;z-index:99}
+.scroll-top:hover{opacity:1}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.animate{animation:fadeUp .5s ease forwards;opacity:0}
+
+@media(max-width:800px){
+  .charts-row{grid-template-columns:1fr}
+  .header{padding:16px}
+  .container{padding:14px}
+  .card-value{font-size:1.2rem}
+  .header-total{font-size:1.2rem}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .summary-wrapper-3{grid-template-columns:1fr}
+  .arrow-col{transform:rotate(90deg);margin:.5rem auto}
+  .tab-btn{font-size:.85rem;padding:12px 8px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== TAB NAVIGATION ===== -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('realtime')" id="tabBtn1">
+    <span class="tab-icon">📊</span>即時總覽
+  </button>
+  <button class="tab-btn" onclick="switchTab('history')" id="tabBtn2">
+    <span class="tab-icon">📈</span>歷史比較
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 1: 即時總覽 -->
+<!-- ============================================================ -->
+<div class="tab-panel active" id="panel-realtime">
+
+<div class="header">
+  <div>
+    <h1><span>📊</span> 阿峰老師投資儀表板</h1>
+    <div class="header-date">資料日期：2026-04-27 ｜ USD/TWD = 31.28</div>
+  </div>
+  <div class="header-right">
+    <button class="toggle-btn active" id="toggleCurrency" onclick="toggleCurrency()">TWD / USD 切換</button>
+    <div>
+      <div class="header-date">總資產</div>
+      <div class="header-total" id="headerTotal">NT$15,705,818</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="summary-row" id="summaryCards">
+    <div class="card">
+      <div class="card-label">總資產價值</div>
+      <div class="card-value" id="cardTotal">NT$15,705,818</div>
+    </div>
+    <div class="card">
+      <div class="card-label">投資總損益</div>
+      <div class="card-value positive">+NT$3,050,150</div>
+      <div class="card-sub positive">+24.10%（投入 NT$10,461,603）</div>
+    </div>
+    <div class="card">
+      <div class="card-label">台股</div>
+      <div class="card-value">NT$7,045,266</div>
+      <div class="card-sub positive">+NT$2,652,266 (+60.38%) ｜佔比 44.9%</div>
+    </div>
+    <div class="card">
+      <div class="card-label">美股</div>
+      <div class="card-value">NT$5,234,436</div>
+      <div class="card-sub positive">+NT$398,268 (+8.24%) ｜佔比 33.3%</div>
+    </div>
+    <div class="card">
+      <div class="card-label">保單</div>
+      <div class="card-value">NT$1,268,521</div>
+      <div class="card-sub positive">+NT$378,619 (+42.54%) ｜佔比 8.1%</div>
+    </div>
+    <div class="card">
+      <div class="card-label">現金與存款</div>
+      <div class="card-value">NT$1,794,065</div>
+      <div class="card-sub">凱基 1,326K / 台新 228K / 現金 240K ｜佔比 11.4%</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>資產配置</h3>
+      <div class="chart-wrap"><canvas id="t1-allocationChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>個股持倉規模（市值 NT$）</h3>
+      <div class="chart-wrap"><canvas id="t1-holdingsChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="pnl-chart-card">
+    <h3>全部標的損益表現（P&L %）</h3>
+    <div class="chart-wrap" style="max-height:500px"><canvas id="t1-pnlChart"></canvas></div>
+  </div>
+
+  <div class="table-card">
+    <h3>持倉明細</h3>
+    <table id="holdingsTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">股票<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(1)">市場<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(2)">投入成本<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(3)">市值<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(4)">損益<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(5)">損益%<span class="sort-arrow"></span></th>
+          <th onclick="sortTable(6)">佔比%<span class="sort-arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB 2: 歷史比較 -->
+<!-- ============================================================ -->
+<div class="tab-panel" id="panel-history">
+
+<div class="h-header">
+  <h1>阿峰老師投資歷史分析</h1>
+  <div class="subtitle">2026/03/16 → 2026/04/27（42 天）</div>
+  <div class="big-number">+NT$4,231,000 (+36.9%)</div>
+  <div class="big-label">總資產變化</div>
+</div>
+
+<div class="container">
+
+<div class="section-title">📊 資產總覽對比（三階段）</div>
+<div class="summary-wrapper-3">
+  <div class="summary-card">
+    <h3>📅 2026/03/16 基準日</h3>
+    <div class="total" style="color:var(--text)">NT$11,475,292</div>
+    <div class="breakdown-item"><span class="breakdown-label">台股</span><span>NT$6,133,185</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">美股</span><span>NT$2,946,723</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">保險</span><span>NT$1,057,298</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">銀行現金</span><span>NT$1,229,327</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">加密貨幣</span><span>NT$108,702</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">手邊現金</span><span>—</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">借出款項</span><span>—</span></div>
+  </div>
+  <div class="arrow-col">▶</div>
+  <div class="summary-card">
+    <h3>📅 2026/04/19 中期</h3>
+    <div class="total pos">NT$14,036,970</div>
+    <div class="breakdown-item"><span class="breakdown-label">台股</span><span class="pos">NT$6,352,750 <small>+3.6%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">美股</span><span class="pos">NT$5,166,466 <small>+75.3%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">保險</span><span class="pos">NT$1,219,037 <small>+15.3%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">銀行現金</span><span class="neg">NT$697,301 <small>-43.3%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">加密貨幣</span><span>NT$111,426 <small>+2.5%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">手邊現金</span><span class="gold">NT$240,000</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">借出款項</span><span class="gold">NT$250,000</span></div>
+  </div>
+  <div class="arrow-col">▶</div>
+  <div class="summary-card">
+    <h3>📅 2026/04/27 最新</h3>
+    <div class="total" style="color:var(--gold)">NT$15,706,000</div>
+    <div class="breakdown-item"><span class="breakdown-label">台股</span><span class="pos">NT$7,045,266 <small>+14.9%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">美股</span><span class="pos">NT$5,484,818 <small>+86.1%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">保險</span><span class="pos">NT$1,268,521 <small>+20.0%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">銀行現金</span><span class="pos">NT$1,554,065 <small>+26.4%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">加密貨幣</span><span>NT$113,530 <small>+4.4%</small></span></div>
+    <div class="breakdown-item"><span class="breakdown-label">手邊現金</span><span class="gold">NT$240,000</span></div>
+    <div class="breakdown-item"><span class="breakdown-label">借出款項</span><span class="gold">NT$250,000</span></div>
+  </div>
+</div>
+
+<div class="section-title">📈 資產增長瀑布圖（3/16 → 4/27）</div>
+<div class="chart-box">
+  <div class="chart-wrap"><canvas id="t2-waterfallChart"></canvas></div>
+</div>
+
+<div class="section-title">🍩 資產配置比較（三階段）</div>
+<div class="grid-3">
+  <div class="chart-box">
+    <div class="card-title" style="text-align:center">2026/03/16</div>
+    <div class="chart-wrap" style="max-height:300px"><canvas id="t2-donut1"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <div class="card-title" style="text-align:center">2026/04/19</div>
+    <div class="chart-wrap" style="max-height:300px"><canvas id="t2-donut2"></canvas></div>
+  </div>
+  <div class="chart-box">
+    <div class="card-title" style="text-align:center">2026/04/27</div>
+    <div class="chart-wrap" style="max-height:300px"><canvas id="t2-donut3"></canvas></div>
+  </div>
+</div>
+
+<div class="section-title">📊 個股損益率比較（3/16 vs 4/19 vs 4/27）</div>
+<div class="chart-box">
+  <div class="chart-wrap" style="max-height:550px"><canvas id="t2-plChart"></canvas></div>
+</div>
+
+<div class="section-title">🇹🇼 台股個股詳情</div>
+<div class="grid-2-3" id="twStockCards"></div>
+
+<div class="section-title">🇺🇸 美股變動總覽（4/27 最新）</div>
+<div class="chart-box">
+  <ul class="migration-list" id="usMigration"></ul>
+</div>
+
+<div class="section-title">💸 現金流向分析</div>
+<div class="flow-section" id="flowSection"></div>
+
+<div class="section-title">💡 關鍵洞察</div>
+<div class="grid-2-3" id="insightCards"></div>
+
+</div>
+</div>
+
+<div class="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+<script>
+// ===== TAB SWITCHING =====
+let tab1ChartsCreated = false;
+let tab2ChartsCreated = false;
+const tab1Charts = [];
+const tab2Charts = [];
+
+function switchTab(tab) {
+  // Update buttons
+  document.getElementById('tabBtn1').classList.toggle('active', tab === 'realtime');
+  document.getElementById('tabBtn2').classList.toggle('active', tab === 'history');
+  // Update panels
+  document.getElementById('panel-realtime').classList.toggle('active', tab === 'realtime');
+  document.getElementById('panel-history').classList.toggle('active', tab === 'history');
+  // Scroll to top
+  window.scrollTo({top: 0, behavior: 'instant'});
+  // Create/recreate charts for the active tab
+  if (tab === 'realtime') {
+    setTimeout(() => initTab1Charts(), 50);
+  } else {
+    setTimeout(() => initTab2Charts(), 50);
+  }
+}
+
+function destroyCharts(arr) {
+  while (arr.length) {
+    const c = arr.pop();
+    if (c && typeof c.destroy === 'function') c.destroy();
+  }
+}
+
+// ===== TAB 1 DATA =====
+const RATE = 31.28;
+let showTWD = true;
+
+const usStocks = [
+  {name:'GOOGL+GOOG (谷歌)',market:'US',invested:46325,value:51313,pnl:4988,pnlPct:10.77},
+  {name:'NVDA (輝達)',market:'US',invested:26563,value:31326,pnl:4763,pnlPct:17.93},
+  {name:'VOO (S&P 500)',market:'US',invested:23993,value:26817,pnl:2825,pnlPct:11.77},
+  {name:'VT (全球股市)',market:'US',invested:23426,value:26212,pnl:2786,pnlPct:11.89},
+  {name:'TSLA (特斯拉)',market:'US',invested:15282,value:13547,pnl:-1735,pnlPct:-11.35},
+  {name:'QQQ (那斯達克100)',market:'US',invested:6077,value:6639,pnl:562,pnlPct:9.25},
+  {name:'META',market:'US',invested:6690,value:6750,pnl:60,pnlPct:0.90},
+  {name:'PLTR (Palantir)',market:'US',invested:6237,value:4722,pnl:-1515,pnlPct:-24.29},
+];
+const twStocks = [
+  {name:'0050 (元大台灣50)',market:'TW',investedTWD:2634695,valueTWD:3972960,pnlTWD:1338265,pnlPct:50.80},
+  {name:'2330 (台積電)',market:'TW',investedTWD:1259000,valueTWD:2477910,pnlTWD:1218910,pnlPct:96.82},
+  {name:'2317 (鴻海)',market:'TW',investedTWD:499000,valueTWD:594396,pnlTWD:95396,pnlPct:19.12},
+];
+const cryptoStocks = [
+  {name:'BTC (比特幣)',market:'Crypto',valueUSD:3629.49,valueTWD:Math.round(3629.49*31.28),investedTWD:null,pnlTWD:null,pnlPct:null},
+];
+const cryptoTotalTWD = Math.round(3629.49*31.28);
+const insuranceItems = [
+  {name:'富邦保單 A（VCCT 安聯收益成長）',market:'Insurance',valueTWD:686418,investedTWD:665195,pnlTWD:21223,pnlPct:3.19},
+  {name:'富邦保單 B（UNDA 安聯台灣科技）',market:'Insurance',valueTWD:582103,investedTWD:224707,pnlTWD:357396,pnlPct:175.90},
+];
+const insuranceTotalTWD = 686418+582103;
+const cashItems = [
+  {name:'凱基銀行',market:'Cash',valueTWD:1325899},
+  {name:'台新銀行（交點文化）',market:'Cash',valueTWD:228166},
+  {name:'手頭現金',market:'Cash',valueTWD:240000},
+];
+const loanItems = [
+  {name:'應收借款（Gask）',market:'Loan',valueTWD:250000},
+];
+const cashTotalTWD = 1325899+228166+240000;
+const loanTotalTWD = 250000;
+const grandTotalTWD = 7045266+5234436+insuranceTotalTWD+cryptoTotalTWD+cashTotalTWD+loanTotalTWD;
+
+function fmt(n,prefix='NT$'){
+  if(n===null||n===undefined) return '-';
+  const abs=Math.abs(n);
+  const s=abs>=1e8?(abs/1e8).toFixed(2)+'億':abs>=1e4?Math.round(abs).toLocaleString():abs.toLocaleString();
+  if(prefix==='') return (n<0?'-':'')+Math.round(abs).toLocaleString();
+  return (n>0?'+':'')+prefix+Math.round(n).toLocaleString();
+}
+function fmtVal(n,prefix='NT$'){
+  return prefix+Math.round(Math.abs(n)).toLocaleString();
+}
+
+function getAllRows(){
+  const rows=[];
+  usStocks.forEach(s=>{
+    const investedTWD=Math.round(s.invested*RATE);
+    const valueTWD=Math.round(s.value*RATE);
+    const pnlTWD=Math.round(s.pnl*RATE);
+    const alloc=(valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'US',investedUSD:s.invested,valueUSD:s.value,pnlUSD:s.pnl,investedTWD,valueTWD,pnlTWD,pnlPct:s.pnlPct,alloc:parseFloat(alloc)});
+  });
+  twStocks.forEach(s=>{
+    const alloc=(s.valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'TW',investedUSD:null,valueUSD:null,pnlUSD:null,investedTWD:s.investedTWD,valueTWD:s.valueTWD,pnlTWD:s.pnlTWD,pnlPct:s.pnlPct,alloc:parseFloat(alloc)});
+  });
+  insuranceItems.forEach(s=>{
+    const alloc=(s.valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'Insurance',investedUSD:null,valueUSD:null,pnlUSD:null,investedTWD:s.investedTWD,valueTWD:s.valueTWD,pnlTWD:s.pnlTWD,pnlPct:s.pnlPct,alloc:parseFloat(alloc)});
+  });
+  cryptoStocks.forEach(s=>{
+    const alloc=(s.valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'Crypto',investedUSD:null,valueUSD:s.valueUSD,pnlUSD:null,investedTWD:null,valueTWD:s.valueTWD,pnlTWD:0,pnlPct:0,alloc:parseFloat(alloc),noCost:true});
+  });
+  cashItems.forEach(s=>{
+    const alloc=(s.valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'Cash',investedUSD:null,valueUSD:null,pnlUSD:null,investedTWD:null,valueTWD:s.valueTWD,pnlTWD:0,pnlPct:0,alloc:parseFloat(alloc),noCost:true});
+  });
+  loanItems.forEach(s=>{
+    const alloc=(s.valueTWD/grandTotalTWD*100).toFixed(1);
+    rows.push({name:s.name,market:'Loan',investedUSD:null,valueUSD:null,pnlUSD:null,investedTWD:null,valueTWD:s.valueTWD,pnlTWD:0,pnlPct:0,alloc:parseFloat(alloc),noCost:true});
+  });
+  return rows;
+}
+
+// Table
+let sortCol=-1,sortAsc=true;
+function renderTable(){
+  const rows=getAllRows();
+  if(sortCol>=0){
+    const keys=['name','market','investedTWD','valueTWD','pnlTWD','pnlPct','alloc'];
+    const k=keys[sortCol];
+    rows.sort((a,b)=>{
+      let va=a[k],vb=b[k];
+      if(typeof va==='string') return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
+      return sortAsc?(va||0)-(vb||0):(vb||0)-(va||0);
+    });
+  }
+  const tbody=document.getElementById('tableBody');
+  let html='';
+  let totalInv=0,totalVal=0,totalPnl=0;
+  rows.forEach(r=>{
+    const pnlClass=r.pnlTWD>0?'positive':r.pnlTWD<0?'negative':'';
+    const mktClass=r.market==='US'?'us':r.market==='Crypto'?'crypto':r.market==='Insurance'?'insurance':r.market==='Cash'?'cash':r.market==='Loan'?'loan':'tw';
+    const inv=showTWD?fmtVal(r.investedTWD,'NT$'):(r.investedUSD!==null?fmtVal(r.investedUSD,'$'):fmtVal(r.investedTWD,'NT$'));
+    const val=showTWD?fmtVal(r.valueTWD,'NT$'):(r.valueUSD!==null?fmtVal(r.valueUSD,'$'):fmtVal(r.valueTWD,'NT$'));
+    const pnl=showTWD?fmt(r.pnlTWD,'NT$'):(r.pnlUSD!==null?fmt(r.pnlUSD,'$'):fmt(r.pnlTWD,'NT$'));
+    totalVal+=r.valueTWD;totalInv+=r.investedTWD;totalPnl+=r.pnlTWD;
+    html+=`<tr>
+      <td><strong>${r.name}</strong></td>
+      <td><span class="market-tag ${mktClass}">${r.market}</span></td>
+      <td>${r.noCost?'-':inv}</td>
+      <td>${val}</td>
+      <td class="${pnlClass}">${r.noCost?'-':pnl}</td>
+      <td class="${pnlClass}">${r.noCost?'-':(r.pnlPct>0?'+':'')+r.pnlPct.toFixed(2)+'%'}</td>
+      <td>${r.alloc}%</td>
+    </tr>`;
+  });
+  const totPnlClass=totalPnl>=0?'positive':'negative';
+  const totPnlPct=totalInv>0?(totalPnl/totalInv*100).toFixed(2):'0.00';
+  html+=`<tr class="total-row">
+    <td>合計</td><td></td>
+    <td>${fmtVal(totalInv,'NT$')}</td>
+    <td>${fmtVal(totalVal,'NT$')}</td>
+    <td class="${totPnlClass}">${fmt(totalPnl,'NT$')}</td>
+    <td class="${totPnlClass}">+${totPnlPct}%</td><td>100%</td>
+  </tr>`;
+  tbody.innerHTML=html;
+}
+function sortTable(col){
+  if(sortCol===col)sortAsc=!sortAsc;else{sortCol=col;sortAsc=true;}
+  renderTable();
+}
+function toggleCurrency(){
+  showTWD=!showTWD;
+  document.getElementById('toggleCurrency').textContent=showTWD?'TWD / USD 切換':'USD / TWD 切換';
+  document.getElementById('headerTotal').textContent='NT$'+Math.round(grandTotalTWD).toLocaleString();
+  renderTable();
+}
+
+// ===== TAB 1 CHARTS =====
+function initTab1Charts(){
+  destroyCharts(tab1Charts);
+
+  // Allocation Donut
+  const ctx1=document.getElementById('t1-allocationChart').getContext('2d');
+  tab1Charts.push(new Chart(ctx1,{
+    type:'doughnut',
+    data:{
+      labels:['台股 (TW)','美股 (US)','保單','現金與存款','應收借款','加密貨幣'],
+      datasets:[{
+        data:[7045266,5234436,insuranceTotalTWD,cashTotalTWD,loanTotalTWD,cryptoTotalTWD],
+        backgroundColor:['#00e676','#4fc3f7','#bcaaa4','#aed581','#ffcc80','#ce93d8'],
+        borderColor:'#0d0d1a',borderWidth:2,hoverOffset:8
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,cutout:'62%',
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#aaa',padding:16,font:{size:13}}},
+        tooltip:{callbacks:{label:function(ctx){const v=ctx.parsed;const pct=(v/grandTotalTWD*100).toFixed(1);return ctx.label+': NT$'+Math.round(v).toLocaleString()+' ('+pct+'%)';}}}
+      }
+    }
+  }));
+
+  // Holdings Bar
+  const rows=getAllRows().sort((a,b)=>b.valueTWD-a.valueTWD);
+  const ctx2=document.getElementById('t1-holdingsChart').getContext('2d');
+  tab1Charts.push(new Chart(ctx2,{
+    type:'bar',
+    data:{
+      labels:rows.map(r=>r.name.split(' ')[0]),
+      datasets:[{
+        label:'市值 (NT$)',
+        data:rows.map(r=>r.valueTWD),
+        backgroundColor:rows.map(r=>r.noCost?'rgba(206,147,216,0.7)':r.pnlTWD>0?'rgba(0,230,118,0.7)':r.pnlTWD<0?'rgba(255,82,82,0.7)':'rgba(79,195,247,0.7)'),
+        borderColor:rows.map(r=>r.noCost?'#ce93d8':r.pnlTWD>0?'#00e676':r.pnlTWD<0?'#ff5252':'#4fc3f7'),
+        borderWidth:1,borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return 'NT$'+Math.round(ctx.parsed.x).toLocaleString();}}}},
+      scales:{
+        x:{ticks:{color:'#888',callback:v=>'NT$'+(v>=1e6?(v/1e6).toFixed(1)+'M':(v/1e3).toFixed(0)+'K')},grid:{color:'#1e1e36'}},
+        y:{ticks:{color:'#ccc',font:{size:12}},grid:{display:false}}
+      }
+    }
+  }));
+
+  // P&L Chart
+  const allStocks=[
+    ...usStocks.map(s=>({name:s.name,pnlPct:s.pnlPct,pnlTWD:Math.round(s.pnl*RATE),market:'US'})),
+    ...twStocks.map(s=>({name:s.name,pnlPct:s.pnlPct,pnlTWD:s.pnlTWD,market:'TW'})),
+    ...insuranceItems.map(s=>({name:s.name.split('（')[0],pnlPct:s.pnlPct,pnlTWD:s.pnlTWD,market:'Insurance'}))
+  ];
+  const sorted=allStocks.sort((a,b)=>b.pnlPct-a.pnlPct);
+  const ctx3=document.getElementById('t1-pnlChart').getContext('2d');
+  tab1Charts.push(new Chart(ctx3,{
+    type:'bar',
+    data:{
+      labels:sorted.map(s=>s.name.split(' ')[0]+(s.market==='TW'?' 🇹🇼':'')),
+      datasets:[{
+        label:'損益 %',
+        data:sorted.map(s=>s.pnlPct),
+        backgroundColor:sorted.map(s=>s.pnlPct>=0?'rgba(0,230,118,0.75)':'rgba(255,82,82,0.75)'),
+        borderColor:sorted.map(s=>s.pnlPct>=0?'#00e676':'#ff5252'),
+        borderWidth:1,borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:function(ctx){const s=sorted[ctx.dataIndex];return '損益: '+(s.pnlTWD>=0?'+':'')+'NT$'+Math.round(s.pnlTWD).toLocaleString();}}}},
+      scales:{
+        x:{ticks:{color:'#888',callback:v=>v+'%'},grid:{color:'#1e1e36'}},
+        y:{ticks:{color:'#ccc',font:{size:12}},grid:{display:false}}
+      }
+    },
+    plugins:[{
+      id:'pnlLabels',
+      afterDatasetsDraw(chart){
+        const {ctx:c,data,scales:{x,y}}=chart;
+        data.datasets[0].data.forEach((val,i)=>{
+          const s=sorted[i];
+          const xPos=x.getPixelForValue(val);
+          const yPos=y.getPixelForValue(i);
+          c.save();
+          c.fillStyle=val>=0?'#a5d6a7':'#ef9a9a';
+          c.font='11px sans-serif';
+          c.textBaseline='middle';
+          const label=(s.pnlTWD>=0?'+':'')+'NT$'+Math.round(s.pnlTWD).toLocaleString();
+          if(val>=0){c.textAlign='left';c.fillText(label,xPos+6,yPos);}
+          else{c.textAlign='right';c.fillText(label,xPos-6,yPos);}
+          c.restore();
+        });
+      }
+    }]
+  }));
+
+  tab1ChartsCreated=true;
+}
+
+// ===== TAB 2 CHARTS & CONTENT =====
+let tab2ContentBuilt = false;
+
+function initTab2Charts(){
+  destroyCharts(tab2Charts);
+
+  // Build static content only once
+  if(!tab2ContentBuilt){
+    buildTab2Content();
+    tab2ContentBuilt=true;
+  }
+
+  const C={green:'#00e676',red:'#ff5252',gold:'#ffd740',blue:'#448aff',cyan:'#18ffff',purple:'#b388ff',orange:'#ffab40',text2:'#8888aa'};
+  const hFmt=n=>{if(n==null)return '—';const abs=Math.abs(n);return (n<0?'-':'')+abs.toLocaleString('en-US',{maximumFractionDigits:0});};
+  const hFmtNT=n=>'NT$'+hFmt(n);
+
+  // Waterfall
+  (function(){
+    const labels=['3/16 總資產','台股增長','美股增長','保險增值','銀行現金增加','新增手邊現金','新增借出款','加密貨幣','4/27 總資產'];
+    const twGain=7045266-6133185;
+    const usGain=5484818-2946723;
+    const insGain=1268521-1057298;
+    const cashChg=1554065-1229327;
+    const handCash=240000;
+    const loan=250000;
+    const cryptoChg=113530-108702;
+    const deltas=[null,twGain,usGain,insGain,cashChg,handCash,loan,cryptoChg,null];
+    let running=11475292;
+    const bottoms=[],tops=[],colors=[];
+    for(let i=0;i<labels.length;i++){
+      if(i===0){bottoms.push(0);tops.push(11475292);colors.push(C.blue);}
+      else if(i===labels.length-1){bottoms.push(0);tops.push(15706000);colors.push(C.gold);}
+      else{
+        const d=deltas[i];
+        if(d>=0){bottoms.push(running);running+=d;tops.push(running);colors.push(C.green);}
+        else{running+=d;bottoms.push(running);tops.push(running-d);colors.push(C.red);}
+      }
+    }
+    const ctx=document.getElementById('t2-waterfallChart').getContext('2d');
+    tab2Charts.push(new Chart(ctx,{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:'底部',data:bottoms,backgroundColor:'transparent',borderWidth:0,barPercentage:.6},
+        {label:'變化',data:tops.map((t,i)=>t-bottoms[i]),backgroundColor:colors,borderWidth:0,borderRadius:4,barPercentage:.6}
+      ]},
+      options:{
+        responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        scales:{
+          x:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:C.text2,callback:v=>(v/1e6).toFixed(1)+'M'}},
+          y:{stacked:true,grid:{display:false},ticks:{color:'#ccc',font:{size:11}}}
+        },
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>{
+          if(ctx.datasetIndex===0)return '';
+          const i=ctx.dataIndex;
+          if(i===0)return '起始：'+hFmtNT(11475292);
+          if(i===labels.length-1)return '最終：'+hFmtNT(15706000);
+          const d=deltas[i];return (d>=0?'+':'')+hFmtNT(d);
+        }}}}
+      }
+    }));
+  })();
+
+  // Donuts
+  (function(){
+    const labels1=['台股','美股','保險','銀行現金','加密貨幣'];
+    const data1=[6133185,2946723,1057298,1229327,108702];
+    const labels2=['台股','美股','保險','銀行現金','加密貨幣','手邊現金','借出款項'];
+    const data2=[6352750,5166466,1219037,697301,111426,240000,250000];
+    const labels3=['台股','美股','保險','銀行現金','加密貨幣','手邊現金','借出款項'];
+    const data3=[7045266,5484818,1268521,1554065,113530,240000,250000];
+    const palette=[C.cyan,C.blue,C.purple,C.green,C.orange,C.gold,'#ff80ab'];
+    const donutOpts=(labels,data,pal)=>({
+      type:'doughnut',
+      data:{labels,datasets:[{data,backgroundColor:pal.slice(0,data.length),borderColor:'#0d0d1a',borderWidth:2}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'55%',
+        plugins:{
+          legend:{position:'bottom',labels:{color:'#ccc',font:{size:10},padding:6,usePointStyle:true,pointStyleWidth:8}},
+          tooltip:{callbacks:{label:ctx=>{const total=ctx.dataset.data.reduce((a,b)=>a+b,0);return ctx.label+': '+hFmtNT(ctx.raw)+' ('+((ctx.raw/total)*100).toFixed(1)+'%)';}}}
+        }
+      }
+    });
+    tab2Charts.push(new Chart(document.getElementById('t2-donut1'),donutOpts(labels1,data1,palette)));
+    tab2Charts.push(new Chart(document.getElementById('t2-donut2'),donutOpts(labels2,data2,palette)));
+    tab2Charts.push(new Chart(document.getElementById('t2-donut3'),donutOpts(labels3,data3,palette)));
+  })();
+
+  // P&L Comparison
+  (function(){
+    const stocks=[
+      {name:'PLTR',b:-10,m:-22.55,a:-24.29},
+      {name:'TSLA',b:-5,m:-6.86,a:-11.35},
+      {name:'META',b:-2,m:2.92,a:0.90},
+      {name:'QQQ',b:-1.5,m:6.30,a:9.25},
+      {name:'GOOGL+GOOG',b:-3,m:8.76,a:10.77},
+      {name:'VOO',b:-1,m:10.50,a:11.77},
+      {name:'VT',b:0,m:10.82,a:11.89},
+      {name:'鴻海 2317',b:3.1,m:-1.20,a:19.10},
+      {name:'NVDA',b:1.5,m:13.53,a:17.93},
+      {name:'0050',b:23.8,m:36.11,a:50.80},
+      {name:'台積電 2330',b:35.5,m:44.85,a:96.80},
+    ];
+    stocks.sort((a,b)=>a.a-b.a);
+    const ctx=document.getElementById('t2-plChart').getContext('2d');
+    tab2Charts.push(new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:stocks.map(s=>s.name),
+        datasets:[
+          {label:'3/16 損益率%',data:stocks.map(s=>s.b),backgroundColor:'rgba(24,255,255,.5)',borderRadius:3,barPercentage:.28,categoryPercentage:.8},
+          {label:'4/19 損益率%',data:stocks.map(s=>s.m),backgroundColor:'rgba(179,136,255,.6)',borderRadius:3,barPercentage:.28,categoryPercentage:.8},
+          {label:'4/27 損益率%',data:stocks.map(s=>s.a),backgroundColor:stocks.map(s=>s.a>=0?'rgba(0,230,118,.7)':'rgba(255,82,82,.7)'),borderRadius:3,barPercentage:.28,categoryPercentage:.8}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:C.text2,callback:v=>v+'%'}},
+          y:{grid:{display:false},ticks:{color:'#ccc',font:{size:11}}}
+        },
+        plugins:{
+          legend:{labels:{color:'#ccc',usePointStyle:true,pointStyleWidth:8,font:{size:11}}},
+          tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.raw.toFixed(2)+'%'}}
+        }
+      }
+    }));
+  })();
+
+  tab2ChartsCreated=true;
+}
+
+function buildTab2Content(){
+  const C={green:'#00e676',red:'#ff5252',gold:'#ffd740',blue:'#448aff',cyan:'#18ffff',purple:'#b388ff',orange:'#ffab40',text2:'#8888aa'};
+  const hFmt=n=>{if(n==null)return '—';const abs=Math.abs(n);return (n<0?'-':'')+abs.toLocaleString('en-US',{maximumFractionDigits:0});};
+  const hFmtNT=n=>'NT$'+hFmt(n);
+  const pct=n=>(n>=0?'+':'')+n.toFixed(2)+'%';
+
+  // TW Stock Cards
+  const twStockData=[
+    {ticker:'0050',name:'元大台灣50',shares0:42335,shares1:42720,cost0:61.48,cost1:61.63,price0:76.35,price1:93.00,pl0:23.8,pl1:50.80,sold:false},
+    {ticker:'2330',name:'台積電',shares0:1035,shares1:1094,cost0:1373.55,cost1:1394.70,price0:1870,price1:2265,pl0:35.5,pl1:96.80,sold:false},
+    {ticker:'2317',name:'鴻海',shares0:2506,shares1:2607,cost0:207.89,cost1:207.45,price0:215.50,price1:228,pl0:3.1,pl1:19.10,sold:false},
+    {ticker:'2454',name:'聯發科',shares0:241,shares1:0,cost0:1485.17,cost1:null,price0:1735,price1:null,pl0:16.3,pl1:null,sold:true},
+  ];
+  const wrap1=document.getElementById('twStockCards');
+  twStockData.forEach(s=>{
+    const plColor=s.sold?C.gold:(s.pl1>=0?C.green:C.red);
+    const barW=s.sold?100:Math.min(100,Math.abs(s.pl1)/100*100);
+    const priceChg=s.sold?'已賣出':hFmtNT(s.price1)+' ('+(s.price1>s.price0?'+':'')+((s.price1-s.price0)/s.price0*100).toFixed(1)+'%)';
+    const sharesChg=s.sold?'— → 0':hFmt(s.shares0)+' → '+hFmt(s.shares1)+' ('+(s.shares1>s.shares0?'+':'')+hFmt(s.shares1-s.shares0)+')';
+    const plText=s.sold?'獲利了結 +'+s.pl0+'%':pct(s.pl0)+' → '+pct(s.pl1);
+    wrap1.innerHTML+=`
+      <div class="stock-card">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div><span class="ticker">${s.ticker}</span> <span class="name">${s.name}</span></div>
+          ${s.sold?'<span class="badge badge-sold">已賣出</span>':''}
+        </div>
+        <div class="stock-row"><span>股價</span><span>${priceChg}</span></div>
+        <div class="stock-row"><span>持股</span><span>${sharesChg}</span></div>
+        <div class="stock-row"><span>損益率</span><span style="color:${plColor};font-weight:700">${plText}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${barW}%;background:${plColor}"></div></div>
+      </div>`;
+  });
+
+  // US Migration
+  const usItems=[
+    {ticker:'IEF',action:'sold',badge:'已賣出',note:'債券 ETF，清倉'},
+    {ticker:'IGOV',action:'sold',badge:'已賣出',note:'國際債券 ETF，清倉'},
+    {ticker:'VTI',action:'sold',badge:'已賣出',note:'全市場 ETF，清倉'},
+    {ticker:'VT',action:'added',badge:'新增',note:'全球 ETF，報酬 +11.89%（+$2,786）'},
+    {ticker:'VOO',action:'increased',badge:'加碼',note:'S&P 500 ETF，報酬 +11.77%（+$2,825）'},
+    {ticker:'NVDA',action:'increased',badge:'加碼',note:'輝達，報酬 +17.93%（+$4,763）'},
+    {ticker:'GOOGL+GOOG',action:'held',badge:'持有',note:'Google，報酬 +10.77%（+$4,988），持續獲利'},
+    {ticker:'QQQ',action:'held',badge:'持有',note:'納指 ETF，報酬 +9.25%（+$562）'},
+    {ticker:'META',action:'held',badge:'持有',note:'Meta，報酬 +0.90%（+$60），微幅獲利'},
+    {ticker:'TSLA',action:'held',badge:'持有',note:'特斯拉，報酬 -11.35%（-$1,735），虧損擴大'},
+    {ticker:'PLTR',action:'held',badge:'持有',note:'Palantir，報酬 -24.29%（-$1,515），持續惡化'},
+  ];
+  const badgeClass={sold:'badge-sold',added:'badge-added',increased:'badge-increased',held:'badge-held'};
+  const wrap2=document.getElementById('usMigration');
+  usItems.forEach(it=>{
+    const plColor=it.action==='sold'?C.text2:(it.note.includes('-$')?C.red:C.green);
+    wrap2.innerHTML+=`
+      <li class="migration-item">
+        <span class="badge ${badgeClass[it.action]}">${it.badge}</span>
+        <strong style="min-width:100px;color:${C.cyan}">${it.ticker}</strong>
+        <span style="color:${plColor}">${it.note}</span>
+      </li>`;
+  });
+
+  // Cash Flow
+  const flows=[
+    {label:'台股增長',delta:912081,dir:'gain'},
+    {label:'美股增長',delta:2538095,dir:'gain'},
+    {label:'保險增值',delta:211223,dir:'gain'},
+    {label:'銀行現金增加',delta:324738,dir:'gain'},
+    {label:'手邊現金（新增）',delta:240000,dir:'gain'},
+    {label:'借出款項（新增）',delta:250000,dir:'neutral'},
+    {label:'加密貨幣增值',delta:4828,dir:'gain'},
+  ];
+  const wrap3=document.getElementById('flowSection');
+  const maxVal=2538095;
+  wrap3.innerHTML='<div style="font-size:.85rem;color:var(--text-dim);margin-bottom:1rem">42 天內總資產從 NT$11,475,292 增長至 NT$15,706,000（+NT$4,231,000 / +36.9%）</div>';
+  flows.forEach(f=>{
+    const barWidth=Math.max(8,Math.abs(f.delta)/maxVal*100);
+    const color=f.dir==='gain'?C.green:(f.dir==='loss'?C.red:C.gold);
+    const sign=f.delta>=0?'+':'';
+    wrap3.innerHTML+=`
+      <div class="flow-row">
+        <span class="flow-label">${f.label}</span>
+        <div class="flow-bar" style="width:${barWidth}%;background:${color}">${sign}${hFmt(f.delta)}</div>
+      </div>`;
+  });
+
+  // Insights
+  const insights=[
+    {icon:'🏆',title:'台積電報酬率衝破 +96.8%',text:'42 天內從 +35.5% 飆升至 +96.8%，股價突破 2,265 元，接近翻倍。阿峰老師最成功的持倉。',color:C.gold},
+    {icon:'📈',title:'0050 報酬率 +50.8%，ETF 也能飛',text:'元大台灣50 報酬率從 +23.8% 攀升至 +50.8%，被動投資的典範。',color:C.green},
+    {icon:'🇺🇸',title:'美股整體翻身，8 支中 6 支獲利',text:'NVDA +17.93%、VOO +11.77%、VT +11.89%、GOOGL +10.77% 領漲。僅 TSLA 和 PLTR 仍虧損。',color:C.blue},
+    {icon:'💰',title:'總資產突破 1,570 萬，42 天增長 36.9%',text:'從 1,147 萬增長至 1,570 萬，台股與美股雙引擎拉動，銀行現金也回升至 155 萬。',color:C.gold},
+    {icon:'🔄',title:'鴻海逆轉勝：-1.2% → +19.1%',text:'鴻海從 4/19 的 -1.2% 虧損翻轉至 +19.1% 獲利，股價從 206 元漲至 228 元。',color:C.cyan},
+    {icon:'⚠️',title:'PLTR 持續惡化至 -24.29%',text:'Palantir 虧損從 -22.55% 擴大至 -24.29%，為全持股中表現最差。建議評估停損。',color:C.red},
+  ];
+  const wrap4=document.getElementById('insightCards');
+  insights.forEach(ins=>{
+    wrap4.innerHTML+=`
+      <div class="insight-card">
+        <div class="insight-icon" style="border:1px solid ${ins.color}30">${ins.icon}</div>
+        <div class="insight-text"><strong style="color:${ins.color}">${ins.title}</strong>${ins.text}</div>
+      </div>`;
+  });
+}
+
+// ===== INIT =====
+renderTable();
+initTab1Charts();
+
+// Scroll animations for tab 2
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('animate');observer.unobserve(e.target);}});
+},{threshold:.1});
+// Observe after tab2 content is built
+function observeTab2(){
+  document.querySelectorAll('#panel-history .card, #panel-history .chart-box, #panel-history .stock-card, #panel-history .insight-card, #panel-history .summary-card, #panel-history .flow-section').forEach(el=>observer.observe(el));
+}
+// Patch switchTab to observe after first build
+const _origSwitch = switchTab;
+switchTab = function(tab){
+  _origSwitch(tab);
+  if(tab==='history') setTimeout(observeTab2,100);
+};
+</script>
+</body>
+</html>
